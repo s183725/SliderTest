@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">SliderTest</string>
+    <string-array name="SliderTest">
+        <item>20</item>
+        <item>20</item>
+    </string-array>
+    <string-array name="modes_array">
+        <item>Off</item>
+        <item>Cycle</item>
+        <item>Manual</item>
+    </string-array>
+</resources>
