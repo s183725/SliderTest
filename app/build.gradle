@@ -46,7 +46,7 @@ dependencies {
 
     // Bluetooth
     implementation 'com.github.sirvar:bluetoothkit-android:v0.3'
-    implementation 'io.palaima:smoothbluetooth:0.1.0'
+    implementation 'io.palaima:smoothbluetooth:0.2.0-SNAPSHOT'
 
     // Interface
     implementation 'org.honorato.multistatetogglebutton:multistatetogglebutton:0.2.2@arr'
