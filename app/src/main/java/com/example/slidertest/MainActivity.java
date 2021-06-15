@@ -4,22 +4,30 @@ import androidx.annotation.RequiresApi;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatActivity;
 import android.app.Activity;
+import android.bluetooth.BluetoothClass;
+import android.database.DefaultDatabaseErrorHandler;
 import android.icu.text.SimpleDateFormat;
 import android.icu.util.Calendar;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.Button;
+import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.widget.Toolbar;
+
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 
 
 //MULTITOGGLEBUTTON LIBS
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.slider.Slider;
 import com.google.android.material.snackbar.Snackbar;
-import com.sha.kamel.multitogglebutton.MultiToggleButton;
-import com.sha.kamel.multitogglebutton.Selected;
-import com.sha.kamel.multitogglebutton.ToggleButton;
 
 
 //BLUETOOTH LIBS
@@ -30,9 +38,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.stream.Stream;
 
-import io.palaima.smoothbluetooth.Device;
 import io.palaima.smoothbluetooth.SmoothBluetooth;
-
+import io.palaima.smoothbluetooth.Device;
 
 @RequiresApi(api = Build.VERSION_CODES.N)
 public class MainActivity extends AppCompatActivity {
@@ -42,40 +49,107 @@ public class MainActivity extends AppCompatActivity {
     
     private int[] sliderValue = new int[2];
     private Slider[] sliders = new Slider[2];
-    
-    private MultiToggleButton mtb1;
+
+
+    private MaterialButtonToggleGroup mtb1;
     private TextView slideText;
-    private Selected select;
+    private ListView deviceListView;
+
+    public void setDeviceList(ListView deviceList) {
+        this.deviceListView = deviceList;
+    }
 
     private Calendar nowTime = Calendar.getInstance();
     private SimpleDateFormat dateFormat;
     private String date;
 
-    private SmoothBluetooth smoothSignal;
 
+    private SmoothBluetooth smoothSignal;
+    // INSTANTIATION OF APP AND CREATION CONDITIONS
+    //
     @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        smoothSignal = new SmoothBluetooth(  );
+        //Buttons and interaction initiation
+        //
+        mtb1 = (MaterialButtonToggleGroup) findViewById(R.id.mtb); //MultiToggleButton
+        Button connectButton = (Button) findViewById(R.id.btnConnect); //DiscoveryButton
 
+        //Slider initiation
+        //
         sliders[warm] = (Slider) findViewById(R.id.warmSlider);
         sliders[cold] = (Slider) findViewById(R.id.coldSlider);
-        slideText = (TextView) findViewById(R.id.slideText) ;
-        initTextview();
+        slideText = (TextView) findViewById(R.id.blueText) ;
 
-        mtb1 = (MultiToggleButton) findViewById(R.id.mtb);
-        mtb1.selectFirstItem(true);
-        mtb1.setOnItemSelectedListener(mtbListen);
+        //ListView and Bluetooth initiation
+        //
+        ArrayList<DeviceFound> devicesArrayList = new ArrayList<>();
+        devicesArrayList.add(new DeviceFound("TestNavn0","0x2123"));
+        devicesArrayList.add(new DeviceFound("TestNavn1","0x2003"));
+        DevicesAdapter adapter = new DevicesAdapter(this,devicesArrayList);
+        deviceListView = (ListView) findViewById(R.id.deviceList);
+        deviceListView.setAdapter(adapter);
 
+        /*      DeviceFound[] items = {new DeviceFound("name1","mac1"),
+                               new DeviceFound("name2","mac2")};
+        */
+
+        //deviceListView.setAdapter( new ArrayAdapter(this,R.layout.device_list,R.id.deviceName,items));
+        //deviceListView.setAdapter(adapter);
+        //adapter.notifyDataSetChanged();
+
+        //MultiToggleButton Conditional
+        //
+                mtb1.addOnButtonCheckedListener(
+                        new MaterialButtonToggleGroup.OnButtonCheckedListener() {
+                            @Override
+                            public void onButtonChecked(MaterialButtonToggleGroup group, int checkedId, boolean isChecked) {
+
+                                if (checkedId == R.id.btnCycle) {
+                                    slidersOn(sliders, false);
+                                    connectButtonOn(connectButton,false);
+                                    try {
+                                        Thread.sleep(100);
+                                    } catch (InterruptedException e) {
+                                        e.printStackTrace();
+                                    }
+                                    slideText.setText(midnightMinutes());
+                                } else if (checkedId == R.id.btnManual) {
+                                    initTextview();
+                                    slidersOn(sliders, true);
+                                    sliders[warm].addOnChangeListener(warmListen);
+                                    sliders[cold].addOnChangeListener(coldListen);
+                                    connectButtonOn(connectButton,false);
+                                } else if (checkedId == R.id.btnOff) {
+                                    slidersOn(sliders, false);
+                                    slideText.setText("Disconnected");
+                                    connectButtonOn(connectButton,true);
+                                    //adapter.notifyDataSetChanged();
+                                }
+                            }
+                        });
+        //Connect button listener
+        //
+        connectButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                DeviceFound example = new DeviceFound("AddedName","Added address");
+                devicesArrayList.add(example);
+                adapter.notifyDataSetChanged();
+            }
+        });
+
+        //Display standard value for sliders as defined in activity_main
+        //
         sliderValue[warm] = (int) sliders[warm].getValue();
         sliderValue[cold] = (int) sliders[cold].getValue();
-
     }
 
     // WARM SLIDER CONFIGURATION
+    //
     private final Slider.OnChangeListener warmListen = new Slider.OnChangeListener() {
         @Override
         public void onValueChange(@NonNull Slider warmSlider, float value, boolean fromUser) {
@@ -86,6 +160,7 @@ public class MainActivity extends AppCompatActivity {
     };
 
     // COLD SLIDER CONFIGURATION
+    //
     private final Slider.OnChangeListener coldListen = new Slider.OnChangeListener() {
         @Override
         public void onValueChange(@NonNull Slider coldSlider, float value, boolean fromUser) {
@@ -94,12 +169,12 @@ public class MainActivity extends AppCompatActivity {
             slideText.setText(textString);
         }
     };
-
+/*
     // TOGGLEBUTTON LISTENER AND CONDITIONALS
-    private final MultiToggleButton.OnItemSelectedListener mtbListen = new ToggleButton.OnItemSelectedListener() {
-        @Override
-        public void onSelected(ToggleButton toggleButton, View item, int position, String label, boolean Selected) {
-            if ( toggleButton.getSelected().getSingleItemPosition() == 1 ) {
+    private final MaterialButtonToggleGroup.OnButtonCheckedListener mtbListen = new MaterialButtonToggleGroup.OnButtonCheckedListener() {
+
+        public void onSelected(MaterialButtonToggleGroup mtb1, View item, int position, String label, boolean Selected) {
+            if ( mtb1.getCheckedButtonId() ==  idCycle) {
                 slidersOn(sliders, false);
                 try {
                     Thread.sleep(100);
@@ -107,7 +182,7 @@ public class MainActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
                 slideText.setText(midnightMinutes());
-            } else if ( toggleButton.getSelected().getSingleItemPosition() == 2 ) {
+            } else if ( mtb1.getCheckedButtonId() == idManual ) {
                 initTextview();
                 slidersOn(sliders, true);
                 sliders[warm].addOnChangeListener(warmListen);
@@ -117,13 +192,10 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     };
-
-    // GET MULTITOGGLEBUTTON SELECTED ITEM
-    private int selectedItem(ToggleButton toggleButton) {
-        return select.getSingleItemPosition();
-    }
+  */
 
     // SLIDER ON/OFF SWITCH FOR state
+    //
     private void slidersOn(Slider[] sliders, boolean state) {
         if (state == true) {
             sliders[warm].setEnabled(true);
@@ -137,6 +209,18 @@ public class MainActivity extends AppCompatActivity {
             sliders[cold].setEnabled(false);
             sliders[cold].setAlpha(0.3f);
             findViewById(R.id.imageView2).setAlpha(0.3f);
+        }
+    }
+
+    private void connectButtonOn(Button connectButton, boolean enable){
+        if (enable == false) {
+            connectButton.setClickable(false);
+            connectButton.setFocusable(false);
+            connectButton.setAlpha(0.3f);
+        } else if(enable == true) {
+            connectButton.setClickable(true);
+            connectButton.setFocusable(true);
+            connectButton.setAlpha(1.0f);
         }
     }
 
@@ -154,15 +238,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //BLUETOOTH OPERATION FUNCTIONS AND LISTENER CONDITIONS
+    //
     private SmoothBluetooth.Listener smoothListener = new SmoothBluetooth.Listener() {
         @Override
         public void onBluetoothNotSupported() {
+            //Toast.makeText(getApplicationContext(), "Bluetooth not supported", Toast.LENGTH_LONG);
 
         }
 
         @Override
         public void onBluetoothNotEnabled() {
-
+            //Toast.makeText(getApplicationContext(), "Bluetooth not enabled", Toast.LENGTH_LONG);
         }
 
         @Override
@@ -202,10 +288,6 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onDevicesFound(List<Device> deviceList, SmoothBluetooth.ConnectionCallback connectionCallback) {
-            int n = deviceList.size();
-            for(int i = 0; i < n ; i++){
-
-            }
 
         }
 
@@ -214,12 +296,12 @@ public class MainActivity extends AppCompatActivity {
 
         }
     };
-
     @Override
     protected void onDestroy() {
         super.onDestroy();
         smoothSignal.stop();
-    }
+    };
+
 }
 
 
