@@ -1,10 +1,12 @@
 package com.example.slidertest;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
-import androidx.annotation.StringRes;
+
+import android.bluetooth.BluetoothAdapter;
 import androidx.appcompat.app.AppCompatActivity;
 import android.app.Activity;
 import android.bluetooth.BluetoothClass;
+import android.content.Intent;
 import android.database.DefaultDatabaseErrorHandler;
 import android.icu.text.SimpleDateFormat;
 import android.icu.util.Calendar;
@@ -13,6 +15,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.Toolbar;
@@ -46,7 +49,9 @@ public class MainActivity extends AppCompatActivity {
     
     final int warm = 0;
     final int cold = 1;
-    
+
+    public static final int ENABLE_BT__REQUEST = 1;
+
     private int[] sliderValue = new int[2];
     private Slider[] sliders = new Slider[2];
 
@@ -54,6 +59,7 @@ public class MainActivity extends AppCompatActivity {
     private MaterialButtonToggleGroup mtb1;
     private TextView slideText;
     private ListView deviceListView;
+    private ProgressBar progressBar;
 
     public void setDeviceList(ListView deviceList) {
         this.deviceListView = deviceList;
@@ -72,6 +78,14 @@ public class MainActivity extends AppCompatActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        progressBar = findViewById(R.id.progressBar);
+        progressBar.animate().cancel();
+        progressBar.setAlpha(0.0f);
+
+        //Bluetooth initiation
+        //
+        smoothSignal = new SmoothBluetooth(getApplicationContext(),
+                SmoothBluetooth.ConnectionTo.OTHER_DEVICE, SmoothBluetooth.Connection.SECURE,smoothListener);
 
         //Buttons and interaction initiation
         //
@@ -84,7 +98,7 @@ public class MainActivity extends AppCompatActivity {
         sliders[cold] = (Slider) findViewById(R.id.coldSlider);
         slideText = (TextView) findViewById(R.id.blueText) ;
 
-        //ListView and Bluetooth initiation
+        //ListView initiation and itemized device handling
         //
         ArrayList<DeviceFound> devicesArrayList = new ArrayList<>();
         devicesArrayList.add(new DeviceFound("TestNavn0","0x2123"));
@@ -109,8 +123,8 @@ public class MainActivity extends AppCompatActivity {
                             public void onButtonChecked(MaterialButtonToggleGroup group, int checkedId, boolean isChecked) {
 
                                 if (checkedId == R.id.btnCycle) {
-                                    slidersOn(sliders, false);
-                                    connectButtonOn(connectButton,false);
+                                    SlidersOn(sliders, false);
+                                    ConnectButtonOn(connectButton,false);
                                     try {
                                         Thread.sleep(100);
                                     } catch (InterruptedException e) {
@@ -119,14 +133,14 @@ public class MainActivity extends AppCompatActivity {
                                     slideText.setText(midnightMinutes());
                                 } else if (checkedId == R.id.btnManual) {
                                     initTextview();
-                                    slidersOn(sliders, true);
+                                    SlidersOn(sliders, true);
                                     sliders[warm].addOnChangeListener(warmListen);
                                     sliders[cold].addOnChangeListener(coldListen);
-                                    connectButtonOn(connectButton,false);
+                                    ConnectButtonOn(connectButton,false);
                                 } else if (checkedId == R.id.btnOff) {
-                                    slidersOn(sliders, false);
+                                    SlidersOn(sliders, false);
                                     slideText.setText("Disconnected");
-                                    connectButtonOn(connectButton,true);
+                                    ConnectButtonOn(connectButton,true);
                                     //adapter.notifyDataSetChanged();
                                 }
                             }
@@ -175,7 +189,7 @@ public class MainActivity extends AppCompatActivity {
 
         public void onSelected(MaterialButtonToggleGroup mtb1, View item, int position, String label, boolean Selected) {
             if ( mtb1.getCheckedButtonId() ==  idCycle) {
-                slidersOn(sliders, false);
+                SlidersOn(sliders, false);
                 try {
                     Thread.sleep(100);
                 } catch (InterruptedException e) {
@@ -184,11 +198,11 @@ public class MainActivity extends AppCompatActivity {
                 slideText.setText(midnightMinutes());
             } else if ( mtb1.getCheckedButtonId() == idManual ) {
                 initTextview();
-                slidersOn(sliders, true);
+                SlidersOn(sliders, true);
                 sliders[warm].addOnChangeListener(warmListen);
                 sliders[cold].addOnChangeListener(coldListen);
             } else {
-                slidersOn(sliders, false);
+                SlidersOn(sliders, false);
             }
         }
     };
@@ -196,7 +210,7 @@ public class MainActivity extends AppCompatActivity {
 
     // SLIDER ON/OFF SWITCH FOR state
     //
-    private void slidersOn(Slider[] sliders, boolean state) {
+    private void SlidersOn(Slider[] sliders, boolean state) {
         if (state == true) {
             sliders[warm].setEnabled(true);
             sliders[warm].setAlpha(1.0f);
@@ -212,7 +226,21 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void connectButtonOn(Button connectButton, boolean enable){
+    private void progressBarOn(boolean enable){
+        ProgressBar buffer = (ProgressBar) findViewById(R.id.progressBar);
+        if(enable) {
+            buffer.setClickable(false);
+            buffer.setAlpha(1.0f);
+            buffer.setRotation(0.5f);
+            buffer.animate().start();
+        } else {
+            buffer.setClickable(false);
+            buffer.setAlpha(0.0f);
+            buffer.animate().cancel();
+        }
+    }
+
+    private void ConnectButtonOn(Button connectButton, boolean enable){
         if (enable == false) {
             connectButton.setClickable(false);
             connectButton.setFocusable(false);
@@ -221,6 +249,16 @@ public class MainActivity extends AppCompatActivity {
             connectButton.setClickable(true);
             connectButton.setFocusable(true);
             connectButton.setAlpha(1.0f);
+        }
+    }
+    
+    private void MultiToggleButtonOn(Boolean enable) {
+        if(enable) {
+            mtb1.setAlpha(1.0f);
+            mtb1.setClickable(true);
+        } else {
+            mtb1.setAlpha(0.3f);
+            mtb1.setClickable(false);
         }
     }
 
@@ -242,28 +280,33 @@ public class MainActivity extends AppCompatActivity {
     private SmoothBluetooth.Listener smoothListener = new SmoothBluetooth.Listener() {
         @Override
         public void onBluetoothNotSupported() {
-            //Toast.makeText(getApplicationContext(), "Bluetooth not supported", Toast.LENGTH_LONG);
-
+            Toast.makeText(getApplicationContext(), "Bluetooth not supported", Toast.LENGTH_LONG).show();
         }
 
         @Override
         public void onBluetoothNotEnabled() {
-            //Toast.makeText(getApplicationContext(), "Bluetooth not enabled", Toast.LENGTH_LONG);
+            Toast.makeText(getApplicationContext(), "Bluetooth not enabled", Toast.LENGTH_LONG).show();
+            Intent enableBluetooth = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableBluetooth, ENABLE_BT__REQUEST);
         }
 
         @Override
         public void onConnecting(Device device) {
-
+            mtb1.setAlpha(0.3f);
+            progressBarOn(true);
+            //deviceListView.setAlpha(0.0f);
         }
 
         @Override
         public void onConnected(Device device) {
-
+            mtb1.setAlpha(1.0f);
+            progressBarOn(false);
         }
 
         @Override
         public void onDisconnected() {
-
+            mtb1.setAlpha(0.0f);
+            progressBarOn(false);
         }
 
         @Override

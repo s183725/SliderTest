@@ -20,7 +20,7 @@
         android:stepSize="1.0"
         android:value="20"
         android:valueFrom="0"
-        android:valueTo="100"
+        android:valueTo="127"
         app:labelBehavior="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -42,7 +42,7 @@
         android:stepSize="1.0"
         android:value="20"
         android:valueFrom="0"
-        android:valueTo="100"
+        android:valueTo="127"
         app:labelBehavior="gone"
         app:layout_constraintBottom_toTopOf="@+id/coldSlider"
         app:layout_constraintEnd_toEndOf="parent"
@@ -165,6 +165,8 @@
             app:backgroundTint="@color/colorPrimary"
             android:textColor="@color/white"
             />
+
+
     </com.google.android.material.button.MaterialButtonToggleGroup>
 <!-- androidx.recyclerview.widget.RecyclerView-->
     <ListView
@@ -182,7 +184,20 @@
         app:layout_constraintVertical_bias="0.032"
         tools:listitem="@layout/device_list"
         android:scrollbars="vertical"
+        >
+    </ListView>
 
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyle"
+        android:layout_width="245dp"
+        android:layout_height="215dp"
+        android:clickable="false"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.062"
         />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
