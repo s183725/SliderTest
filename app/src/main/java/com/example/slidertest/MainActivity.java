@@ -6,7 +6,9 @@ import android.bluetooth.BluetoothAdapter;
 import androidx.appcompat.app.AppCompatActivity;
 import android.app.Activity;
 import android.bluetooth.BluetoothClass;
+import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.DefaultDatabaseErrorHandler;
 import android.icu.text.SimpleDateFormat;
 import android.icu.util.Calendar;
@@ -86,7 +88,16 @@ public class MainActivity extends AppCompatActivity {
         //Bluetooth initiation
         //
         BluetoothAdapter btAdapter;
-        btAdapter = get
+        btAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (btAdapter == null) {
+            slideText.setText("Bluetooth not supported");
+
+        } else {
+            if (!btAdapter.isEnabled()) {
+                startActivityForResult(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE),1);
+            }
+        }
+
 
         //Buttons and interaction initiation
         //
@@ -164,6 +175,9 @@ public class MainActivity extends AppCompatActivity {
         //
         sliderValue[warm] = (int) sliders[warm].getValue();
         sliderValue[cold] = (int) sliders[cold].getValue();
+
+        IntentFilter iFilter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+
     }
 
     // WARM SLIDER CONFIGURATION
@@ -281,7 +295,9 @@ public class MainActivity extends AppCompatActivity {
             return "Minutes: " + m;
         }
 
+        protected void onActivityResult(int requestCode, int resultCode, Intent data){
+
+        }
 
 }
-
 
