@@ -57,13 +57,14 @@ public class MainActivity extends AppCompatActivity {
 
 
     private MaterialButtonToggleGroup mtb1;
+        private MaterialButton btnOff;
+        private MaterialButton btnCycle;
+        private MaterialButton btnManual;
+    private Button connectButton;
+
     private TextView slideText;
     private ListView deviceListView;
     private ProgressBar progressBar;
-
-    public void setDeviceList(ListView deviceList) {
-        this.deviceListView = deviceList;
-    }
 
     private Calendar nowTime = Calendar.getInstance();
     private SimpleDateFormat dateFormat;
@@ -84,12 +85,15 @@ public class MainActivity extends AppCompatActivity {
 
         //Bluetooth initiation
         //
-        smoothSignal = new SmoothBluetooth(getApplicationContext(),
-                SmoothBluetooth.ConnectionTo.OTHER_DEVICE, SmoothBluetooth.Connection.SECURE,smoothListener);
+        BluetoothAdapter btAdapter;
+        btAdapter = get
 
         //Buttons and interaction initiation
         //
         mtb1 = (MaterialButtonToggleGroup) findViewById(R.id.mtb); //MultiToggleButton
+            btnOff = findViewById(R.id.btnOff);
+            btnManual = findViewById(R.id.btnManual);
+            btnCycle = findViewById(R.id.btnCycle);
         Button connectButton = (Button) findViewById(R.id.btnConnect); //DiscoveryButton
 
         //Slider initiation
@@ -124,7 +128,7 @@ public class MainActivity extends AppCompatActivity {
 
                                 if (checkedId == R.id.btnCycle) {
                                     SlidersOn(sliders, false);
-                                    ConnectButtonOn(connectButton,false);
+                                    ConnectButtonOn(false);
                                     try {
                                         Thread.sleep(100);
                                     } catch (InterruptedException e) {
@@ -136,11 +140,11 @@ public class MainActivity extends AppCompatActivity {
                                     SlidersOn(sliders, true);
                                     sliders[warm].addOnChangeListener(warmListen);
                                     sliders[cold].addOnChangeListener(coldListen);
-                                    ConnectButtonOn(connectButton,false);
+                                    ConnectButtonOn(false);
                                 } else if (checkedId == R.id.btnOff) {
                                     SlidersOn(sliders, false);
                                     slideText.setText("Disconnected");
-                                    ConnectButtonOn(connectButton,true);
+                                    ConnectButtonOn(true);
                                     //adapter.notifyDataSetChanged();
                                 }
                             }
@@ -183,30 +187,6 @@ public class MainActivity extends AppCompatActivity {
             slideText.setText(textString);
         }
     };
-/*
-    // TOGGLEBUTTON LISTENER AND CONDITIONALS
-    private final MaterialButtonToggleGroup.OnButtonCheckedListener mtbListen = new MaterialButtonToggleGroup.OnButtonCheckedListener() {
-
-        public void onSelected(MaterialButtonToggleGroup mtb1, View item, int position, String label, boolean Selected) {
-            if ( mtb1.getCheckedButtonId() ==  idCycle) {
-                SlidersOn(sliders, false);
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                slideText.setText(midnightMinutes());
-            } else if ( mtb1.getCheckedButtonId() == idManual ) {
-                initTextview();
-                SlidersOn(sliders, true);
-                sliders[warm].addOnChangeListener(warmListen);
-                sliders[cold].addOnChangeListener(coldListen);
-            } else {
-                SlidersOn(sliders, false);
-            }
-        }
-    };
-  */
 
     // SLIDER ON/OFF SWITCH FOR state
     //
@@ -226,21 +206,27 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void progressBarOn(boolean enable){
+    private void progressBarOn(boolean enable) {
         ProgressBar buffer = (ProgressBar) findViewById(R.id.progressBar);
-        if(enable) {
+        if (enable) {
+            deviceListView.setClickable(false);
+            deviceListView.setAlpha(0.0f);
+
             buffer.setClickable(false);
             buffer.setAlpha(1.0f);
             buffer.setRotation(0.5f);
             buffer.animate().start();
         } else {
+            deviceListView.setClickable(true);
+            deviceListView.setAlpha(1.0f);
+
             buffer.setClickable(false);
             buffer.setAlpha(0.0f);
             buffer.animate().cancel();
         }
     }
 
-    private void ConnectButtonOn(Button connectButton, boolean enable){
+    private void ConnectButtonOn(boolean enable){
         if (enable == false) {
             connectButton.setClickable(false);
             connectButton.setFocusable(false);
@@ -260,90 +246,41 @@ public class MainActivity extends AppCompatActivity {
             mtb1.setAlpha(0.3f);
             mtb1.setClickable(false);
         }
-    }
+    };
 
-    private void initTextview() {
-        String textString = "Warm: " + sliderValue[warm] + ", Cold: " + sliderValue[cold];
-        slideText.setText(textString);
-    }
+    private void DiscoveryOn(Boolean enable) {
+        if (enable) {
 
-    private String midnightMinutes() {
-        nowTime = Calendar.getInstance();
-        int h = nowTime.get(Calendar.HOUR);
-        int m = nowTime.get(Calendar.MINUTE)+h*60;
-        //return "Time: " +  h + ": " + m; // Displays time
-        return "Minutes: " + m;
-    }
-
-    //BLUETOOTH OPERATION FUNCTIONS AND LISTENER CONDITIONS
-    //
-    private SmoothBluetooth.Listener smoothListener = new SmoothBluetooth.Listener() {
-        @Override
-        public void onBluetoothNotSupported() {
-            Toast.makeText(getApplicationContext(), "Bluetooth not supported", Toast.LENGTH_LONG).show();
-        }
-
-        @Override
-        public void onBluetoothNotEnabled() {
-            Toast.makeText(getApplicationContext(), "Bluetooth not enabled", Toast.LENGTH_LONG).show();
-            Intent enableBluetooth = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBluetooth, ENABLE_BT__REQUEST);
-        }
-
-        @Override
-        public void onConnecting(Device device) {
-            mtb1.setAlpha(0.3f);
-            progressBarOn(true);
-            //deviceListView.setAlpha(0.0f);
-        }
-
-        @Override
-        public void onConnected(Device device) {
-            mtb1.setAlpha(1.0f);
+        } else {
+            smoothSignal.cancelDiscovery();
             progressBarOn(false);
-        }
-
-        @Override
-        public void onDisconnected() {
-            mtb1.setAlpha(0.0f);
-            progressBarOn(false);
-        }
-
-        @Override
-        public void onConnectionFailed(Device device) {
-
-        }
-
-        @Override
-        public void onDiscoveryStarted() {
-
-        }
-
-        @Override
-        public void onDiscoveryFinished() {
-
-        }
-
-        @Override
-        public void onNoDevicesFound() {
-
-        }
-
-        @Override
-        public void onDevicesFound(List<Device> deviceList, SmoothBluetooth.ConnectionCallback connectionCallback) {
-
-        }
-
-        @Override
-        public void onDataReceived(int data) {
-
+            MultiToggleButtonOn(true);
+            connectButton.setText("SEARCH");
         }
     };
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        smoothSignal.stop();
-    };
+
+        // FUNCTIONALITY METHODS
+        //
+        //
+        private void initTextview() {
+            String textString = "Warm: " + sliderValue[warm] + ", Cold: " + sliderValue[cold];
+            slideText.setText(textString);
+        }
+
+        private void DeviceListOn(Boolean enable) {
+            deviceListView.cancelPendingInputEvents();
+            deviceListView.setClickable(false);
+            deviceListView.setAlpha(0.0f);
+        }
+
+        private String midnightMinutes() {
+            nowTime = Calendar.getInstance();
+            int h = nowTime.get(Calendar.HOUR);
+            int m = nowTime.get(Calendar.MINUTE)+h*60;
+            //return "Time: " +  h + ": " + m; // Displays time
+            return "Minutes: " + m;
+        }
+
 
 }
 
